@@ -11,20 +11,19 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
-    "esModuleInterop": true,
-    "noEmit": false,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
     "noImplicitAny": false,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "pretty": true,
-    "rootDirs": [
-      "./src",
-    ]
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true
   },
   "include": [
-    "./src/**/*ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
+    "dist"
   ]
 }
