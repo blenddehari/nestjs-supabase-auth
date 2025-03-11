@@ -21,6 +21,7 @@ A networking platform for professionals to showcase their experience, skills, an
 - **Backend**: NestJS
 - **Authentication**: Supabase Auth
 - **Database**: PostgreSQL (via Supabase)
+- **ORM**: Prisma
 - **Storage**: Supabase Storage for profile pictures
 
 ## Project Structure
@@ -31,6 +32,8 @@ This project is organized as a monorepo with the following structure:
 nestjs-supabase-auth/
 ├── packages/
 │   ├── backend/         # NestJS backend
+│   │   ├── prisma/      # Prisma schema and migrations
+│   │   └── src/         # Backend source code
 │   ├── frontend/        # Vue.js frontend
 │   └── supabase/        # Supabase configuration
 ```
@@ -59,9 +62,31 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_KEY=your_supabase_anon_key
 ```
 
+2. Create a `.env` file in the `packages/backend` directory with the following variables:
+
+```
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_service_key
+SUPABASE_JWT_SECRET=your_jwt_secret
+
+# Prisma
+DATABASE_URL=postgresql://postgres:your_password@your_supabase_host:5432/postgres
+DIRECT_URL=postgresql://postgres:your_password@your_supabase_direct_host:5432/postgres
+
+# Frontend
+FRONTEND_URL=http://localhost:3001
+```
+
 ### Database Setup
 
-1. Run the SQL migrations in `packages/backend/src/database/migrations/profiles.sql` in your Supabase SQL editor.
+1. Run the SQL migrations in `packages/backend/prisma/migrations/manual/migration.sql` in your Supabase SQL editor.
+2. Generate the Prisma client:
+
+```bash
+cd packages/backend
+npx prisma generate
+```
 
 ### Installation
 
@@ -81,6 +106,41 @@ This will start both the frontend and backend servers concurrently.
 
 - Frontend: http://localhost:3001
 - Backend: http://localhost:3000
+
+## Database Management with Prisma
+
+This project uses Prisma ORM to interact with the Supabase PostgreSQL database. Since Supabase doesn't allow direct connections for migrations from external networks, we use a hybrid approach:
+
+1. Define the database schema in `packages/backend/prisma/schema.prisma`
+2. Create manual SQL migrations in `packages/backend/prisma/migrations/manual/migration.sql`
+3. Run these migrations in the Supabase SQL editor
+4. Generate the Prisma client to interact with the database:
+
+```bash
+cd packages/backend
+npm run prisma:generate
+```
+
+### Connection URLs
+
+For Prisma to work correctly with Supabase, we use two different connection URLs:
+
+- `DATABASE_URL`: Used by the Prisma Client for normal database operations
+- `DIRECT_URL`: Used for migrations and introspection (when available)
+
+If you're working in an environment where direct connections to the database are possible (e.g., within Supabase's network), you can use the `DIRECT_URL` to run migrations directly:
+
+```bash
+npx prisma migrate dev
+```
+
+Otherwise, you'll need to manually apply the SQL migrations through the Supabase SQL editor.
+
+To explore your database with Prisma Studio (requires direct database access):
+
+```bash
+npm run prisma:studio
+```
 
 ## Usage
 

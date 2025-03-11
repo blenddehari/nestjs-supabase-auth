@@ -1,4 +1,8 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { ConfigService } from '@nestjs/config'
+import { PrismaService } from '../prisma/prisma.service'
 import supabase from '../supabase'
 
 // Define interfaces for our DTOs
@@ -26,7 +30,18 @@ type Provider = 'google' | 'github' | 'facebook' | 'twitter'
 
 @Injectable()
 export class AuthService {
-	constructor() {}
+	private supabase: SupabaseClient
+
+	constructor(
+		private jwtService: JwtService,
+		private configService: ConfigService,
+		private prisma: PrismaService
+	) {
+		this.supabase = createClient(
+			this.configService.get<string>('SUPABASE_URL'),
+			this.configService.get<string>('SUPABASE_KEY')
+		)
+	}
 
 	/**
 	 * Register a new user
@@ -34,7 +49,7 @@ export class AuthService {
 	async signUp(signUpDto: SignUpDto) {
 		const { email, password, name } = signUpDto
 
-		const { data, error } = await supabase.auth.signUp({
+		const { data, error } = await this.supabase.auth.signUp({
 			email,
 			password,
 			options: {
@@ -60,7 +75,7 @@ export class AuthService {
 	async signIn(signInDto: SignInDto) {
 		const { email, password } = signInDto
 
-		const { data, error } = await supabase.auth.signInWithPassword({
+		const { data, error } = await this.supabase.auth.signInWithPassword({
 			email,
 			password
 		})
@@ -79,7 +94,7 @@ export class AuthService {
 	 * Sign out a user
 	 */
 	async signOut(token: string) {
-		const { error } = await supabase.auth.admin.signOut(token)
+		const { error } = await this.supabase.auth.admin.signOut(token)
 
 		if (error) {
 			throw new BadRequestException(error.message)
@@ -96,7 +111,7 @@ export class AuthService {
 	async resetPassword(resetPasswordDto: ResetPasswordDto) {
 		const { email } = resetPasswordDto
 
-		const { error } = await supabase.auth.resetPasswordForEmail(email, {
+		const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
 			redirectTo: process.env.PASSWORD_RESET_REDIRECT_URL
 		})
 
@@ -116,12 +131,12 @@ export class AuthService {
 		const { password } = updatePasswordDto
 
 		// Set auth header for this request
-		supabase.auth.setSession({
+		this.supabase.auth.setSession({
 			access_token: token,
 			refresh_token: ''
 		})
 
-		const { error } = await supabase.auth.updateUser({
+		const { error } = await this.supabase.auth.updateUser({
 			password
 		})
 
@@ -138,7 +153,7 @@ export class AuthService {
 	 * Get user profile
 	 */
 	async getProfile(userId: string) {
-		const { data, error } = await supabase
+		const { data, error } = await this.supabase
 			.from('profiles')
 			.select('*')
 			.eq('id', userId)
@@ -155,7 +170,7 @@ export class AuthService {
 	 * Get social auth URL
 	 */
 	async getSocialAuthUrl(provider: Provider) {
-		const { data, error } = await supabase.auth.signInWithOAuth({
+		const { data, error } = await this.supabase.auth.signInWithOAuth({
 			provider,
 			options: {
 				redirectTo: process.env.OAUTH_REDIRECT_URL
@@ -175,7 +190,7 @@ export class AuthService {
 	 * Handle social auth callback
 	 */
 	async handleSocialAuthCallback(code: string) {
-		const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+		const { data, error } = await this.supabase.auth.exchangeCodeForSession(code)
 
 		if (error) {
 			throw new BadRequestException(error.message)
@@ -192,7 +207,7 @@ export class AuthService {
 	 */
 	async linkSocialAccount(_provider: Provider, token: string) {
 		// Set auth header for this request
-		supabase.auth.setSession({
+		this.supabase.auth.setSession({
 			access_token: token,
 			refresh_token: ''
 		})
@@ -203,5 +218,52 @@ export class AuthService {
 			message: 'Social account linking is not implemented in this example',
 			status: 'not_implemented'
 		}
+	}
+
+	async login(email: string, password: string) {
+		const { data, error } = await this.supabase.auth.signInWithPassword({
+			email,
+			password
+		})
+
+		if (error) {
+			throw new UnauthorizedException(error.message)
+		}
+
+		// Return the session data
+		return {
+			user: data.user,
+			session: data.session
+		}
+	}
+
+	async register(email: string, password: string) {
+		const { data, error } = await this.supabase.auth.signUp({
+			email,
+			password
+		})
+
+		if (error) {
+			throw new UnauthorizedException(error.message)
+		}
+
+		// Return the session data
+		return {
+			user: data.user,
+			session: data.session
+		}
+	}
+
+	async validateUser(userId: string) {
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId },
+			include: { profile: true }
+		})
+
+		if (!user) {
+			throw new UnauthorizedException('User not found')
+		}
+
+		return user
 	}
 } 

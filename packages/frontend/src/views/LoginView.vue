@@ -1,37 +1,41 @@
 <template>
-	<div class="login">
+	<div class="login-container">
 		<h1>Login</h1>
-		<form @submit.prevent="handleSubmit" class="login-form">
+		<form @submit.prevent="handleLogin" class="login-form">
+			<div class="form-group">
+				<label for="email">Email</label>
+				<input 
+					type="email" 
+					id="email" 
+					v-model="email" 
+					required 
+					placeholder="Enter your email"
+				>
+			</div>
+			
+			<div class="form-group">
+				<label for="password">Password</label>
+				<input 
+					type="password" 
+					id="password" 
+					v-model="password" 
+					required 
+					placeholder="Enter your password"
+				>
+			</div>
+			
 			<div v-if="error" class="error-message">
 				{{ error }}
 			</div>
-			<div class="form-group">
-				<label for="email">Email</label>
-				<input
-					type="email"
-					id="email"
-					v-model="email"
-					required
-					placeholder="Enter your email"
-				/>
-			</div>
-			<div class="form-group">
-				<label for="password">Password</label>
-				<input
-					type="password"
-					id="password"
-					v-model="password"
-					required
-					placeholder="Enter your password"
-				/>
-			</div>
-			<button type="submit" :disabled="loading">
+			
+			<button type="submit" :disabled="loading" class="login-button">
 				{{ loading ? 'Logging in...' : 'Login' }}
 			</button>
+			
+			<div class="links">
+				<router-link to="/register">Don't have an account? Register</router-link>
+			</div>
 		</form>
-		<p class="register-link">
-			Don't have an account? <router-link to="/register">Register</router-link>
-		</p>
 	</div>
 </template>
 
@@ -45,63 +49,68 @@ export default {
 	setup() {
 		const router = useRouter()
 		const authStore = useAuthStore()
-
+		
 		const email = ref('')
 		const password = ref('')
 		const error = ref('')
 		const loading = ref(false)
-
-		async function handleSubmit() {
+		
+		async function handleLogin() {
+			if (!email.value || !password.value) {
+				error.value = 'Please enter both email and password'
+				return
+			}
+			
+			loading.value = true
+			error.value = ''
+			
 			try {
-				loading.value = true
-				error.value = ''
-
-				const { error: loginError } = await authStore.login(
-					email.value,
-					password.value
-				)
-
-				if (loginError) {
-					error.value = loginError.message
-					return
+				const result = await authStore.login(email.value, password.value)
+				
+				if (result.success) {
+					router.push('/profile')
+				} else {
+					error.value = result.error || 'Login failed. Please try again.'
 				}
-
-				router.push('/profile')
 			} catch (err) {
-				error.value = 'An error occurred during login'
+				error.value = err.message || 'An unexpected error occurred'
 				console.error('Login error:', err)
 			} finally {
 				loading.value = false
 			}
 		}
-
+		
 		return {
 			email,
 			password,
 			error,
 			loading,
-			handleSubmit
+			handleLogin
 		}
 	}
 }
 </script>
 
 <style scoped>
-.login {
+.login-container {
 	max-width: 400px;
 	margin: 40px auto;
 	padding: 20px;
+	background-color: #fff;
+	border-radius: 8px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
 	text-align: center;
-	margin-bottom: 30px;
+	margin-bottom: 24px;
+	color: #333;
 }
 
 .login-form {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 16px;
 }
 
 .form-group {
@@ -111,56 +120,61 @@ h1 {
 }
 
 label {
-	font-weight: bold;
+	font-weight: 500;
+	color: #555;
 }
 
 input {
-	padding: 8px 12px;
+	padding: 12px;
 	border: 1px solid #ddd;
 	border-radius: 4px;
 	font-size: 16px;
 }
 
-button {
-	background-color: #476582;
-	color: white;
+input:focus {
+	outline: none;
+	border-color: #4f46e5;
+}
+
+.login-button {
+	margin-top: 8px;
 	padding: 12px;
+	background-color: #4f46e5;
+	color: white;
 	border: none;
 	border-radius: 4px;
 	font-size: 16px;
+	font-weight: 500;
 	cursor: pointer;
-	transition: background-color 0.3s;
+	transition: background-color 0.2s;
 }
 
-button:hover {
-	background-color: #2c3e50;
+.login-button:hover {
+	background-color: #4338ca;
 }
 
-.register-link {
-	text-align: center;
-	margin-top: 20px;
-}
-
-.register-link a {
-	color: #476582;
-	text-decoration: none;
-}
-
-.register-link a:hover {
-	text-decoration: underline;
+.login-button:disabled {
+	background-color: #a5a5a5;
+	cursor: not-allowed;
 }
 
 .error-message {
-	color: #dc3545;
-	background-color: #dc35451a;
-	padding: 10px;
-	border-radius: 4px;
-	margin-bottom: 20px;
+	color: #dc2626;
+	font-size: 14px;
 	text-align: center;
 }
 
-button:disabled {
-	opacity: 0.7;
-	cursor: not-allowed;
+.links {
+	margin-top: 16px;
+	text-align: center;
+}
+
+.links a {
+	color: #4f46e5;
+	text-decoration: none;
+}
+
+.links a:hover {
+	text-decoration: underline;
 }
 </style> 

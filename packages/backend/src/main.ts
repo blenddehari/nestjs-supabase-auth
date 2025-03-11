@@ -1,24 +1,22 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import * as dotenv from 'dotenv'
-
-dotenv.config()
+import { ConfigService } from '@nestjs/config'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
+	const configService = app.get(ConfigService)
 	
-	// Enable CORS for the frontend
+	// Enable CORS
 	app.enableCors({
-		origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+		origin: configService.get('FRONTEND_URL'),
 		credentials: true
 	})
 	
-	// Set global prefix for all routes
+	// Set global prefix
 	app.setGlobalPrefix('api')
 	
-	console.log('Starting server on port 3001')
-	await app.listen(3001)
-	console.log('Server is running on port 3001')
+	await app.listen(3000)
+	console.log(`Application is running on: ${await app.getUrl()}`)
 }
 
 bootstrap() 

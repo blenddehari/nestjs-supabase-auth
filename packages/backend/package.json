@@ -9,12 +9,21 @@
     "*.md"
   ],
   "scripts": {
-    "start:dev": "tsc -w",
-    "build": "tsc",
-    "prepare": "npm run build",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
   },
   "repository": {
     "type": "git",
@@ -57,11 +66,15 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
+    "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.11",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
+    "@prisma/client": "^6.5.0",
     "dotenv": "^16.4.7",
     "nestjs-supabase-auth": "^1.0.9",
     "passport": "^0.7.0",
+    "prisma": "^6.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   }

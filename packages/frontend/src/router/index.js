@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '../supabase'
 import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
 	history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,17 +16,17 @@ const router = createRouter({
 		{
 			path: '/login',
 			name: 'login',
-			component: () => import('../views/LoginView.vue')
+			component: LoginView
 		},
 		{
 			path: '/register',
 			name: 'register',
-			component: () => import('../views/RegisterView.vue')
+			component: RegisterView
 		},
 		{
 			path: '/profile',
 			name: 'profile',
-			component: () => import('../views/ProfileView.vue'),
+			component: ProfileView,
 			meta: { requiresAuth: true }
 		},
 		{
@@ -35,15 +38,26 @@ const router = createRouter({
 	]
 })
 
+// Navigation guard to check authentication
 router.beforeEach(async (to, from, next) => {
-	const { data: { session } } = await supabase.auth.getSession()
-	const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-
-	if (requiresAuth && !session) {
-		next('/login')
-	} else if (session && (to.path === '/login' || to.path === '/register')) {
-		next('/profile')
+	const authStore = useAuthStore()
+	
+	// Initialize auth store if not already done
+	if (!authStore.initialized) {
+		await authStore.init()
+		authStore.initialized = true
+	}
+	
+	// Check if route requires authentication
+	if (to.matched.some(record => record.meta.requiresAuth)) {
+		// If not authenticated, redirect to login
+		if (!authStore.isAuthenticated) {
+			next({ name: 'login' })
+		} else {
+			next()
+		}
 	} else {
+		// If route doesn't require auth, proceed
 		next()
 	}
 })
