@@ -4,7 +4,7 @@ import { ExtractJwt } from 'passport-jwt'
 import { SupabaseAuthStrategy } from '../passport-supabase.strategy'
 import { SupabaseAuthUser } from '../user.type'
 import { Request } from 'express'
-import supabase from '../../supabase'
+import supabase from '../supabase'
 
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(

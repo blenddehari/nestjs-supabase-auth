@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common'
-import supabase from '../../supabase'
+import supabase from '../supabase'
 
 // Define interfaces for our DTOs
 interface SignUpDto {
