@@ -2,6 +2,9 @@
 	<div class="login">
 		<h1>Login</h1>
 		<form @submit.prevent="handleSubmit" class="login-form">
+			<div v-if="error" class="error-message">
+				{{ error }}
+			</div>
 			<div class="form-group">
 				<label for="email">Email</label>
 				<input
@@ -22,7 +25,9 @@
 					placeholder="Enter your password"
 				/>
 			</div>
-			<button type="submit">Login</button>
+			<button type="submit" :disabled="loading">
+				{{ loading ? 'Logging in...' : 'Login' }}
+			</button>
 		</form>
 		<p class="register-link">
 			Don't have an account? <router-link to="/register">Register</router-link>
@@ -31,23 +36,51 @@
 </template>
 
 <script>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
 export default {
 	name: 'LoginView',
-	data() {
-		return {
-			email: '',
-			password: ''
-		}
-	},
-	methods: {
-		async handleSubmit() {
+	setup() {
+		const router = useRouter()
+		const authStore = useAuthStore()
+
+		const email = ref('')
+		const password = ref('')
+		const error = ref('')
+		const loading = ref(false)
+
+		async function handleSubmit() {
 			try {
-				// TODO: Implement login logic
-				console.log('Login attempt with:', { email: this.email })
-			} 
-			catch (error) {
-				console.error('Login error:', error)
+				loading.value = true
+				error.value = ''
+
+				const { error: loginError } = await authStore.login(
+					email.value,
+					password.value
+				)
+
+				if (loginError) {
+					error.value = loginError.message
+					return
+				}
+
+				router.push('/profile')
+			} catch (err) {
+				error.value = 'An error occurred during login'
+				console.error('Login error:', err)
+			} finally {
+				loading.value = false
 			}
+		}
+
+		return {
+			email,
+			password,
+			error,
+			loading,
+			handleSubmit
 		}
 	}
 }
@@ -115,5 +148,19 @@ button:hover {
 
 .register-link a:hover {
 	text-decoration: underline;
+}
+
+.error-message {
+	color: #dc3545;
+	background-color: #dc35451a;
+	padding: 10px;
+	border-radius: 4px;
+	margin-bottom: 20px;
+	text-align: center;
+}
+
+button:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
 }
 </style> 

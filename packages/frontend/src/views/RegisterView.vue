@@ -2,6 +2,9 @@
 	<div class="register">
 		<h1>Register</h1>
 		<form @submit.prevent="handleSubmit" class="register-form">
+			<div v-if="error" class="error-message">
+				{{ error }}
+			</div>
 			<div class="form-group">
 				<label for="email">Email</label>
 				<input
@@ -32,7 +35,9 @@
 					placeholder="Confirm your password"
 				/>
 			</div>
-			<button type="submit">Register</button>
+			<button type="submit" :disabled="loading">
+				{{ loading ? 'Registering...' : 'Register' }}
+			</button>
 		</form>
 		<p class="login-link">
 			Already have an account? <router-link to="/login">Login</router-link>
@@ -41,28 +46,58 @@
 </template>
 
 <script>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
 export default {
 	name: 'RegisterView',
-	data() {
-		return {
-			email: '',
-			password: '',
-			confirmPassword: ''
-		}
-	},
-	methods: {
-		async handleSubmit() {
+	setup() {
+		const router = useRouter()
+		const authStore = useAuthStore()
+
+		const email = ref('')
+		const password = ref('')
+		const confirmPassword = ref('')
+		const error = ref('')
+		const loading = ref(false)
+
+		async function handleSubmit() {
 			try {
-				if (this.password !== this.confirmPassword) {
-					console.error('Passwords do not match')
+				loading.value = true
+				error.value = ''
+
+				if (password.value !== confirmPassword.value) {
+					error.value = 'Passwords do not match'
 					return
 				}
-				// TODO: Implement registration logic
-				console.log('Registration attempt with:', { email: this.email })
-			} 
-			catch (error) {
-				console.error('Registration error:', error)
+
+				const { error: registerError } = await authStore.register(
+					email.value,
+					password.value
+				)
+
+				if (registerError) {
+					error.value = registerError.message
+					return
+				}
+
+				router.push('/login')
+			} catch (err) {
+				error.value = 'An error occurred during registration'
+				console.error('Registration error:', err)
+			} finally {
+				loading.value = false
 			}
+		}
+
+		return {
+			email,
+			password,
+			confirmPassword,
+			error,
+			loading,
+			handleSubmit
 		}
 	}
 }
@@ -130,5 +165,19 @@ button:hover {
 
 .login-link a:hover {
 	text-decoration: underline;
+}
+
+.error-message {
+	color: #dc3545;
+	background-color: #dc35451a;
+	padding: 10px;
+	border-radius: 4px;
+	margin-bottom: 20px;
+	text-align: center;
+}
+
+button:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
 }
 </style> 
