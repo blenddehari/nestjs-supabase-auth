@@ -122,6 +122,12 @@ export default {
 				})
 				
 				if (!response.ok) {
+					if (response.status === 401) {
+						// Handle unauthorized error
+						authStore.logout()
+						router.push('/login')
+						throw new Error('Your session has expired. Please log in again.')
+					}
 					throw new Error(`Failed to fetch profile: ${response.statusText}`)
 				}
 				
@@ -129,7 +135,7 @@ export default {
 				profile.value = data
 			} catch (err) {
 				console.error('Error fetching profile:', err)
-				error.value = 'Failed to load profile. Please try again.'
+				error.value = err.message || 'Failed to load profile. Please try again.'
 			} finally {
 				loading.value = false
 			}

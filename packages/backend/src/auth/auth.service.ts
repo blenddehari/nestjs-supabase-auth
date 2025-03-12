@@ -154,7 +154,7 @@ export class AuthService {
 	 */
 	async getProfile(userId: string) {
 		const { data, error } = await this.supabase
-			.from('profiles')
+			.from('Profile')
 			.select('*')
 			.eq('id', userId)
 			.single()
@@ -221,36 +221,60 @@ export class AuthService {
 	}
 
 	async login(email: string, password: string) {
-		const { data, error } = await this.supabase.auth.signInWithPassword({
-			email,
-			password
-		})
+		try {
+			const { data, error } = await this.supabase.auth.signInWithPassword({
+				email,
+				password
+			})
 
-		if (error) {
-			throw new UnauthorizedException(error.message)
-		}
+			if (error) {
+				throw new UnauthorizedException(error.message)
+			}
 
-		// Return the session data
-		return {
-			user: data.user,
-			session: data.session
+			// Log the session data for debugging
+			console.log('Login successful, session data:', {
+				access_token: data.session?.access_token ? '[REDACTED]' : null,
+				refresh_token: data.session?.refresh_token ? '[REDACTED]' : null,
+				user_id: data.user?.id
+			})
+
+			// Return the session data
+			return {
+				user: data.user,
+				session: data.session
+			}
+		} catch (err) {
+			console.error('Login error:', err)
+			throw new UnauthorizedException(err.message || 'Login failed')
 		}
 	}
 
 	async register(email: string, password: string) {
-		const { data, error } = await this.supabase.auth.signUp({
-			email,
-			password
-		})
+		try {
+			const { data, error } = await this.supabase.auth.signUp({
+				email,
+				password
+			})
 
-		if (error) {
-			throw new UnauthorizedException(error.message)
-		}
+			if (error) {
+				throw new UnauthorizedException(error.message)
+			}
 
-		// Return the session data
-		return {
-			user: data.user,
-			session: data.session
+			// Log the registration data for debugging
+			console.log('Registration successful, user data:', {
+				user_id: data.user?.id,
+				email: data.user?.email,
+				has_session: !!data.session
+			})
+
+			// Return the session data
+			return {
+				user: data.user,
+				session: data.session
+			}
+		} catch (err) {
+			console.error('Registration error:', err)
+			throw new UnauthorizedException(err.message || 'Registration failed')
 		}
 	}
 

@@ -39,6 +39,11 @@
 		
 		<div v-if="loading" class="loading">Loading professionals...</div>
 		
+		<div v-else-if="errorMessage" class="error-message">
+			{{ errorMessage }}
+			<button @click="loadProfessionals" class="retry-button">Retry</button>
+		</div>
+		
 		<div v-else-if="filteredProfessionals.length === 0" class="no-results">
 			No professionals found matching your criteria.
 		</div>
@@ -187,6 +192,7 @@ export default {
 		const statusFilter = ref('')
 		const skillFilter = ref('')
 		const selectedProfile = ref(null)
+		const errorMessage = ref(null)
 		
 		// Load all professionals
 		async function loadProfessionals() {
@@ -194,8 +200,8 @@ export default {
 				loading.value = true
 				
 				const { data, error } = await supabase
-					.from('profiles')
-					.select('*, users(email)')
+					.from('Profile')
+					.select('*, User(email)')
 					.order('full_name')
 				
 				if (error) throw error
@@ -203,10 +209,11 @@ export default {
 				// Process data to include email from users table
 				professionals.value = data.map(profile => ({
 					...profile,
-					email: profile.users?.email || null
+					email: profile.User?.email || null
 				}))
 			} catch (error) {
 				console.error('Error loading professionals:', error)
+				errorMessage.value = 'Failed to load professionals. Please try again.'
 			} finally {
 				loading.value = false
 			}
@@ -299,7 +306,7 @@ export default {
 			}
 			
 			// Otherwise, construct the URL from Supabase storage
-			return `${supabase.storage.from('profiles').getPublicUrl(avatarPath).data.publicUrl}`
+			return `${supabase.storage.from('profile-avatars').getPublicUrl(avatarPath).data.publicUrl}`
 		}
 		
 		// Get status label
@@ -321,13 +328,14 @@ export default {
 		
 		return {
 			professionals,
+			filteredProfessionals,
 			loading,
 			searchQuery,
 			statusFilter,
 			skillFilter,
-			selectedProfile,
 			availableSkills,
-			filteredProfessionals,
+			selectedProfile,
+			errorMessage,
 			handleSearch,
 			viewProfile,
 			getAvatarUrl,
@@ -392,11 +400,31 @@ h1 {
 	font-size: 16px;
 }
 
-.loading, .no-results {
+.loading, .no-results, .error-message {
 	text-align: center;
 	padding: 40px;
 	color: #666;
-	font-style: italic;
+	font-size: 18px;
+}
+
+.error-message {
+	color: #dc2626;
+}
+
+.retry-button {
+	display: block;
+	margin: 20px auto 0;
+	padding: 10px 20px;
+	background-color: #4f46e5;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 16px;
+}
+
+.retry-button:hover {
+	background-color: #4338ca;
 }
 
 .professionals-grid {
