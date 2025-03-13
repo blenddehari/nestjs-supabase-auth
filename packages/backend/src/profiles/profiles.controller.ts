@@ -62,6 +62,22 @@ export class ProfilesController {
 		}
 	}
 
+	@UseGuards(AuthGuard('jwt'))
+	@Get('professionals')
+	async findProfessionals(@Request() req): Promise<Profile[]> {
+		try {
+			const userId = req.user.id
+			console.log('Finding all professionals except user ID:', userId)
+			
+			// Get all profiles except the current user's
+			const profiles = await this.profilesService.findAllExceptUser(userId)
+			return profiles
+		} catch (error) {
+			console.error('Error finding professionals:', error)
+			throw new InternalServerErrorException('Failed to retrieve professionals')
+		}
+	}
+
 	@Get(':id')
 	async findOne(@Param('id') id: string): Promise<Profile> {
 		// Validate UUID format
@@ -279,22 +295,6 @@ export class ProfilesController {
 				throw error
 			}
 			throw new InternalServerErrorException('Failed to upload avatar')
-		}
-	}
-
-	@UseGuards(AuthGuard('jwt'))
-	@Get('professionals')
-	async findProfessionals(@Request() req): Promise<Profile[]> {
-		try {
-			const userId = req.user.id
-			console.log('Finding all professionals except user ID:', userId)
-			
-			// Get all profiles except the current user's
-			const profiles = await this.profilesService.findAllExceptUser(userId)
-			return profiles
-		} catch (error) {
-			console.error('Error finding professionals:', error)
-			throw new InternalServerErrorException('Failed to retrieve professionals')
 		}
 	}
 } 

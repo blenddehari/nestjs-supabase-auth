@@ -182,6 +182,8 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
+import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
 
 export default {
 	name: 'ProfessionalsView',
@@ -193,23 +195,39 @@ export default {
 		const skillFilter = ref('')
 		const selectedProfile = ref(null)
 		const errorMessage = ref(null)
+		const authStore = useAuthStore()
+		const router = useRouter()
 		
 		// Load all professionals
 		async function loadProfessionals() {
 			try {
 				loading.value = true
+				errorMessage.value = null
 				
-				const { data, error } = await supabase
-					.from('Profile')
-					.select('*, User(email)')
-					.order('full_name')
+				// Use the backend API to get professionals (which excludes the current user)
+				const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profiles/professionals`, {
+					headers: {
+						'Authorization': `Bearer ${authStore.session?.access_token}`
+					}
+				})
 				
-				if (error) throw error
+				if (!response.ok) {
+					if (response.status === 401) {
+						// Handle unauthorized error
+						authStore.logout()
+						router.push('/login')
+						throw new Error('Your session has expired. Please log in again.')
+					}
+					throw new Error(`Failed to fetch professionals: ${response.statusText}`)
+				}
 				
-				// Process data to include email from users table
+				const data = await response.json()
+				
+				// Process the data
 				professionals.value = data.map(profile => ({
 					...profile,
-					email: profile.User?.email || null
+					// The backend already provides the data in the correct format
+					// No need to transform user_id to userId, etc.
 				}))
 			} catch (error) {
 				console.error('Error loading professionals:', error)
