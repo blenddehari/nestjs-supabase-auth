@@ -1,12 +1,19 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, NotFoundException, BadRequestException, InternalServerErrorException, UseInterceptors, UploadedFile } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import { ProfilesService } from './profiles.service'
 import { Profile, Prisma } from '@prisma/client'
 import { AuthGuard } from '@nestjs/passport'
 import { validate as uuidValidate } from 'uuid'
+import { ConfigService } from '@nestjs/config'
+import { StorageService } from '../storage/storage.service'
 
 @Controller('profiles')
 export class ProfilesController {
-	constructor(private readonly profilesService: ProfilesService) {}
+	constructor(
+		private readonly profilesService: ProfilesService,
+		private configService: ConfigService,
+		private storageService: StorageService
+	) {}
 
 	@Get()
 	async findAll(): Promise<Profile[]> {
@@ -141,6 +148,15 @@ export class ProfilesController {
 				data.education = []
 			}
 			
+			// Log the update data for debugging
+			console.log('Updating profile for user:', userId)
+			console.log('Update data:', {
+				...data,
+				skills: Array.isArray(data.skills) ? `[${data.skills.length} items]` : data.skills,
+				experiences: Array.isArray(data.experiences) ? `[${data.experiences.length} items]` : data.experiences,
+				education: Array.isArray(data.education) ? `[${data.education.length} items]` : data.education
+			})
+			
 			const profile = await this.profilesService.updateByUserId(userId, data)
 			if (!profile) {
 				throw new NotFoundException(`Profile for current user not found`)
@@ -213,6 +229,72 @@ export class ProfilesController {
 				throw error
 			}
 			throw new InternalServerErrorException('Failed to delete profile')
+		}
+	}
+
+	@UseGuards(AuthGuard('jwt'))
+	@Post('upload-avatar')
+	@UseInterceptors(FileInterceptor('avatar'))
+	async uploadAvatar(@Request() req, @UploadedFile() file: Express.Multer.File) {
+		try {
+			if (!file) {
+				throw new BadRequestException('No file uploaded')
+			}
+			
+			// Validate file type
+			if (!file.mimetype.match(/^image\/(jpeg|png|gif|webp)$/)) {
+				throw new BadRequestException('Invalid file type. Only images are allowed.')
+			}
+			
+			// Validate file size (max 5MB)
+			if (file.size > 5 * 1024 * 1024) {
+				throw new BadRequestException('File size too large. Maximum size is 5MB.')
+			}
+			
+			const userId = req.user.id
+			const fileExt = file.originalname.split('.').pop()
+			
+			// Generate a unique file path
+			const filePath = this.storageService.generateAvatarPath(userId, fileExt)
+			
+			// Upload to Supabase Storage using S3 client
+			console.log(`Uploading avatar for user ${userId} to path ${filePath}`)
+			const avatarUrl = await this.storageService.uploadFile(
+				filePath,
+				file.buffer,
+				file.mimetype
+			)
+			
+			console.log(`Avatar uploaded successfully. URL: ${avatarUrl}`)
+			
+			// Update the user's profile with the new avatar URL
+			await this.profilesService.updateByUserId(userId, {
+				avatarUrl
+			})
+			
+			return { avatarUrl }
+		} catch (error) {
+			console.error('Error uploading avatar:', error)
+			if (error instanceof BadRequestException) {
+				throw error
+			}
+			throw new InternalServerErrorException('Failed to upload avatar')
+		}
+	}
+
+	@UseGuards(AuthGuard('jwt'))
+	@Get('professionals')
+	async findProfessionals(@Request() req): Promise<Profile[]> {
+		try {
+			const userId = req.user.id
+			console.log('Finding all professionals except user ID:', userId)
+			
+			// Get all profiles except the current user's
+			const profiles = await this.profilesService.findAllExceptUser(userId)
+			return profiles
+		} catch (error) {
+			console.error('Error finding professionals:', error)
+			throw new InternalServerErrorException('Failed to retrieve professionals')
 		}
 	}
 } 

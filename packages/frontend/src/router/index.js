@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import EditProfileView from '../views/EditProfileView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -27,6 +28,12 @@ const router = createRouter({
 			path: '/profile',
 			name: 'profile',
 			component: ProfileView,
+			meta: { requiresAuth: true }
+		},
+		{
+			path: '/profile/edit',
+			name: 'editProfile',
+			component: EditProfileView,
 			meta: { requiresAuth: true }
 		},
 		{
