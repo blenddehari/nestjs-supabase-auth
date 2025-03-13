@@ -24,7 +24,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "setup:storage": "node scripts/setup-storage.js"
+    "setup:storage": "node scripts/setup-storage.js",
+    "test:create-user": "node scripts/create-test-user.js"
   },
   "repository": {
     "type": "git",

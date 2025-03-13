@@ -30,11 +30,70 @@ export class ProfilesController {
 	async findMe(@Request() req): Promise<Profile> {
 		try {
 			const userId = req.user.id
+			const userEmail = req.user.email
 			console.log('Finding profile for user ID:', userId)
 			
-			const profile = await this.profilesService.findByUserId(userId)
+			let profile = await this.profilesService.findByUserId(userId)
+			
+			// If profile doesn't exist, create it (fallback for when the trigger doesn't work)
 			if (!profile) {
-				throw new NotFoundException(`Profile for current user not found`)
+				console.log('Profile not found for user ID:', userId, 'Creating new profile...')
+				
+				// Check if user exists in the User table
+				const prisma = this.profilesService.getPrismaClient()
+				let user = await prisma.user.findUnique({
+					where: { id: userId }
+				})
+				
+				// If user doesn't exist, create it
+				if (!user) {
+					console.log('User not found in User table. Creating user record...')
+					user = await prisma.user.create({
+						data: {
+							id: userId,
+							email: userEmail
+						}
+					})
+					console.log('User created:', user)
+				}
+				
+				// Create profile directly using raw SQL to avoid JSON serialization issues
+				console.log('Creating profile using raw SQL...')
+				await prisma.$executeRaw`
+					INSERT INTO "Profile" (
+						user_id, 
+						full_name, 
+						headline, 
+						bio, 
+						location, 
+						website, 
+						avatar_url, 
+						status, 
+						skills, 
+						experiences, 
+						education, 
+						created_at, 
+						updated_at
+					) VALUES (
+						${userId}::uuid, 
+						'', 
+						'', 
+						'', 
+						'', 
+						'', 
+						'', 
+						'available', 
+						'{}'::text[], 
+						'[]'::jsonb, 
+						'[]'::jsonb, 
+						NOW(), 
+						NOW()
+					)
+				`
+				
+				// Fetch the newly created profile
+				profile = await this.profilesService.findByUserId(userId)
+				console.log('Profile created successfully:', profile)
 			}
 			
 			// Ensure skills is an array

@@ -6,6 +6,11 @@ import { Profile, Prisma } from '@prisma/client'
 export class ProfilesService {
 	constructor(private prisma: PrismaService) {}
 
+	// Expose the Prisma client for direct access when needed
+	getPrismaClient(): PrismaService {
+		return this.prisma
+	}
+
 	async findAll(): Promise<Profile[]> {
 		try {
 			// Use raw query to avoid array field issues

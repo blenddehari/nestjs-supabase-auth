@@ -226,8 +226,10 @@ export default {
 				// Process the data
 				professionals.value = data.map(profile => ({
 					...profile,
-					// The backend already provides the data in the correct format
-					// No need to transform user_id to userId, etc.
+					// Transform camelCase to snake_case for consistency with the frontend
+					avatar_url: profile.avatarUrl || profile.avatar_url,
+					full_name: profile.fullName || profile.full_name,
+					user_id: profile.userId || profile.user_id
 				}))
 			} catch (error) {
 				console.error('Error loading professionals:', error)
@@ -309,7 +311,14 @@ export default {
 		
 		// View a professional's profile
 		function viewProfile(profile) {
-			selectedProfile.value = profile
+			// Ensure the profile has the correct field names
+			const normalizedProfile = {
+				...profile,
+				avatar_url: profile.avatarUrl || profile.avatar_url,
+				full_name: profile.fullName || profile.full_name,
+				user_id: profile.userId || profile.user_id
+			}
+			selectedProfile.value = normalizedProfile
 		}
 		
 		// Get avatar URL
@@ -323,8 +332,18 @@ export default {
 				return avatarPath
 			}
 			
+			// If it's an empty string, return a placeholder
+			if (avatarPath === '') {
+				return 'https://via.placeholder.com/150'
+			}
+			
 			// Otherwise, construct the URL from Supabase storage
-			return `${supabase.storage.from('profile-avatars').getPublicUrl(avatarPath).data.publicUrl}`
+			try {
+				return `${supabase.storage.from('profile-avatars').getPublicUrl(avatarPath).data.publicUrl}`
+			} catch (error) {
+				console.error('Error getting avatar URL:', error)
+				return 'https://via.placeholder.com/150'
+			}
 		}
 		
 		// Get status label
